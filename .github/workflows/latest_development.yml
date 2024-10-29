@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  SOURCE_REPO: TNTwise/REAL-Video-Enhancer
 
 jobs:
   build-and-push-dev:
@@ -20,18 +21,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Get last commit info
+    - name: Get last commit info from source repo
       id: last_commit
       run: |
-        LAST_COMMIT_TIME=$(git log -1 --format=%ct)
+        DEFAULT_BRANCH=$(curl -s https://api.github.com/repos/${{ env.SOURCE_REPO }} | jq '.default_branch' | tr -d \")
+        LAST_COMMIT_INFO=$(curl -s "https://api.github.com/repos/${{ env.SOURCE_REPO }}/commits/$DEFAULT_BRANCH")
+        LAST_COMMIT_TIME=$(echo $LAST_COMMIT_INFO | jq -r .commit.author.date)
+        LAST_COMMIT_TIMESTAMP=$(date -d "$LAST_COMMIT_TIME" +%s)
         CURRENT_TIME=$(date +%s)
-        TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIME))
+        TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIMESTAMP))
         if [ $TIME_DIFF -ge 14400 ]; then  # 14400 seconds = 4 hours
           echo "build=true" >> $GITHUB_OUTPUT
         else
           echo "build=false" >> $GITHUB_OUTPUT
         fi
-        echo "LAST_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        echo "LAST_COMMIT_HASH=$(echo $LAST_COMMIT_INFO | jq -r .sha)" >> $GITHUB_OUTPUT
 
     - name: Check for updates
       id: check
