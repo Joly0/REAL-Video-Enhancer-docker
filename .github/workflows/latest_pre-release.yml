@@ -1,0 +1,69 @@
+name: Build and Push Pre-release Docker Image
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Run every 2 hours
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-prerelease:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Get latest pre-release info
+      id: prerelease
+      run: |
+        PRERELEASE_INFO=$(curl -s "https://api.github.com/repos/TNTwise/REAL-Video-Enhancer/releases" | jq -r '[.[] | select(.prerelease == true)] | sort_by(.published_at) | reverse | .[0]')
+        echo "PRERELEASE_TAG=$(echo $PRERELEASE_INFO | jq -r .tag_name)" >> $GITHUB_OUTPUT
+        echo "PRERELEASE_DATE=$(echo $PRERELEASE_INFO | jq -r .published_at)" >> $GITHUB_OUTPUT
+
+    - name: Check for updates
+      id: check
+      run: |
+        if [ ! -f .last_prerelease_build ] || [ "$(cat .last_prerelease_build)" != "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" ]; then
+          echo "update=true" >> $GITHUB_OUTPUT
+        else
+          echo "update=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Prepare Docker metadata
+      id: meta
+      run: |
+        echo "IMAGE_ID=$(echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} | tr '[A-Z]' '[a-z]')" >> $GITHUB_OUTPUT
+
+    - name: Log in to the Container registry
+      if: steps.check.outputs.update == 'true'
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      if: steps.check.outputs.update == 'true'
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.IMAGE_ID }}:pre-release
+        file: ./dockerfile.pre
+
+    - name: Update last build info
+      if: steps.check.outputs.update == 'true'
+      run: |
+        echo "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" > .last_prerelease_build
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add .last_prerelease_build
+        git commit -m "Update last pre-release build info"
+        git push
