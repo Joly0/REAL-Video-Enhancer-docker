@@ -49,7 +49,7 @@ jobs:
 
     - name: Prepare Docker metadata
       id: meta
-      if: steps.last_commit.outputs.build == 'true'
+      if: steps.check.outputs.update == 'true'
       run: |
         echo "IMAGE_ID=$(echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} | tr '[A-Z]' '[a-z]')" >> $GITHUB_OUTPUT
 
