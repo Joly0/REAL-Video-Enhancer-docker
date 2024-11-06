@@ -40,13 +40,6 @@ jobs:
         NEW_COMMIT_PUSHED=$([[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" != "github-actions" ]] && echo true || echo false)
         NEW_PRERELEASE_DETECTED=$([[ ! -f .last_prerelease_build ]] || [[ "$(cat .last_prerelease_build)" != "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" ]] && echo true || echo false)
         
-        # Check if source repo had an update or if prerelease was detected
-        if [[ $NEW_PRERELEASE_DETECTED == "true" ]]; then
-          echo "build=true" >> $GITHUB_OUTPUT
-        else
-          echo "build=false" >> $GITHUB_OUTPUT
-        fi
-        
         # Check if any condition is true for proceeding with the build
         if [[ $MANUAL_TRIGGER == "true" || $NEW_COMMIT_PUSHED == "true" || $NEW_PRERELEASE_DETECTED == "true" ]]; then
           echo "update=true" >> $GITHUB_OUTPUT
