@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight UTC
   workflow_dispatch:  # Allow manual triggering
+  push:
+    paths-ignore:  # Prevent triggering on updates to .last_dev_build
+      - '.last_build'
+      - '.last_dev_build'
+      - '.last_prerelease_build'
 
 env:
   REGISTRY: ghcr.io
@@ -30,7 +35,20 @@ jobs:
     - name: Check for updates
       id: check
       run: |
-        if [ ! -f .last_build ] || [ "$(cat .last_build)" != "${{ steps.release.outputs.RELEASE_TAG }}_${{ steps.release.outputs.RELEASE_DATE }}" ]; then
+        # Define individual conditions using proper bash syntax
+        MANUAL_TRIGGER=$([[ "${{ github.event_name }}" == "workflow_dispatch" ]] && echo true || echo false)
+        NEW_COMMIT_PUSHED=$([[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" != "github-actions" ]] && echo true || echo false)
+        NEW_RELEASE_DETECTED=$([[ ! -f .last_build ]] || [[ "$(cat .last_build)" != "${{ steps.release.outputs.RELEASE_TAG }}_${{ steps.release.outputs.RELEASE_DATE }}" ]] && echo true || echo false)
+        
+        # Check if source repo had an update or if prerelease was detected
+        if [[ $NEW_RELEASE_DETECTED == "true" ]]; then
+          echo "build=true" >> $GITHUB_OUTPUT
+        else
+          echo "build=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Check if any condition is true for proceeding with the build
+        if [[ $MANUAL_TRIGGER == "true" || $NEW_COMMIT_PUSHED == "true" || $NEW_RELEASE_DETECTED == "true" ]]; then
           echo "update=true" >> $GITHUB_OUTPUT
         else
           echo "update=false" >> $GITHUB_OUTPUT
@@ -59,7 +77,7 @@ jobs:
         file: ./dockerfile
 
     - name: Update last build info
-      if: steps.check.outputs.update == 'true'
+      if: steps.check.outputs.build == 'true'
       run: |
         echo "${{ steps.release.outputs.RELEASE_TAG }}_${{ steps.release.outputs.RELEASE_DATE }}" > .last_build
         git config user.name github-actions
