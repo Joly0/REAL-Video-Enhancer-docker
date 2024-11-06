@@ -81,11 +81,31 @@ jobs:
         file: ./dockerfile.dev
 
     - name: Update last build info
-      if: steps.last_commit.outputs.build == 'true'
+      if: steps.check.outputs.update == 'true'
       run: |
-        echo "${{ steps.last_commit.outputs.LAST_COMMIT_HASH }}" > .last_dev_build
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git add .last_dev_build
-        git commit -m "Update last dev build info"
-        git push
+        # Function to update the .last_dev_build file
+        update_last_build_file() {
+          echo "$1" > .last_dev_build
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .last_dev_build
+          git commit -m "Update last dev build info"
+          git push
+        }
+    
+        # Get the new commit hash from the output
+        NEW_COMMIT_HASH="${{ steps.last_commit.outputs.LAST_COMMIT_HASH }}"
+    
+        # Check if .last_dev_build exists
+        if [[ -f .last_dev_build ]]; then
+          # Compare with the old commit hash stored in .last_dev_build
+          OLD_COMMIT_HASH=$(cat .last_dev_build)
+          if [[ "$NEW_COMMIT_HASH" != "$OLD_COMMIT_HASH" ]]; then
+            update_last_build_file "$NEW_COMMIT_HASH"
+          else
+            echo "No new commit, skipping the commit step."
+          fi
+        else
+          # If the file doesn't exist, create it and commit
+          update_last_build_file "$NEW_COMMIT_HASH"
+        fi
