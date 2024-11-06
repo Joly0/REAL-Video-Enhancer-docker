@@ -80,9 +80,25 @@ jobs:
     - name: Update last build info
       if: steps.check.outputs.build == 'true'
       run: |
-        echo "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" > .last_prerelease_build
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git add .last_prerelease_build
-        git commit -m "Update last pre-release build info"
-        git push
+        # Function to update .last_prerelease_build
+        update_last_build_file() {
+          echo "$1" > .last_prerelease_build
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .last_prerelease_build
+          git commit -m "Update last pre-release build info"
+          git push
+        }
+
+        # Combine tag and date for the last build info
+        PRE_RELEASE_TAG_DATE="${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}"
+        if [[ -f .last_prerelease_build ]]; then
+          OLD_PRERELEASE=$(cat .last_prerelease_build)
+          if [[ "$PRE_RELEASE_TAG_DATE" != "$OLD_PRERELEASE" ]]; then
+            update_last_build_file "$PRE_RELEASE_TAG_DATE"
+          else
+            echo "No new pre-release, skipping the commit step."
+          fi
+        else
+          update_last_build_file "$PRE_RELEASE_TAG_DATE"
+        fi
