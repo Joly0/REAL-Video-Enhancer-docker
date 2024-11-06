@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 */2 * * *'  # Run every 2 hours
   workflow_dispatch:  # Allow manual triggering
+  push:
+    paths-ignore:  # Prevent triggering on updates to .last_dev_build
+      - '.last_build'
+      - '.last_dev_build'
+      - '.last_prerelease_build'
 
 env:
   REGISTRY: ghcr.io
@@ -37,11 +42,12 @@ jobs:
         fi
         echo "LAST_COMMIT_HASH=$(echo $LAST_COMMIT_INFO | jq -r .sha)" >> $GITHUB_OUTPUT
 
-    - name: Check for updates
+    - name: Determine if build should proceed
       id: check
-      if: steps.last_commit.outputs.build == 'true'
       run: |
-        if [ ! -f .last_dev_build ] || [ "$(cat .last_dev_build)" != "${{ steps.last_commit.outputs.LAST_COMMIT_HASH }}" ]; then
+        # Check if the workflow was manually triggered, or if the current repo received a commit (not by github-actions)
+        # or if the source repo is older than 4 hours.
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ] || ([ "${{ github.event_name }}" == "push" ] && [ "${{ github.actor }}" != "github-actions" ]) || [ "${{ steps.last_commit.outputs.build }}" == "true" ]; then
           echo "update=true" >> $GITHUB_OUTPUT
         else
           echo "update=false" >> $GITHUB_OUTPUT
