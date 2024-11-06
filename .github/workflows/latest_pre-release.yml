@@ -39,8 +39,14 @@ jobs:
         MANUAL_TRIGGER="${{ github.event_name }}" == "workflow_dispatch"
         NEW_COMMIT_PUSHED="${{ github.event_name }}" == "push" && [ "${{ github.actor }}" != "github-actions" ]
         NEW_PRERELEASE_DETECTED=[ ! -f .last_prerelease_build ] || [ "$(cat .last_prerelease_build)" != "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" ]
-        echo "build=true" >> $GITHUB_OUTPUT
-
+        
+        # Check if source repo had an update
+        if $NEW_PRERELEASE_DETECTED; then
+          echo "build=true" >> $GITHUB_OUTPUT
+        else
+          echo "build=false" >> $GITHUB_OUTPUT
+        fi
+        
         # Check if any condition is true
         if $MANUAL_TRIGGER || $NEW_COMMIT_PUSHED || $NEW_PRERELEASE_DETECTED; then
           echo "update=true" >> $GITHUB_OUTPUT
