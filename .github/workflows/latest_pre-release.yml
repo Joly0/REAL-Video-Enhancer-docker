@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 */2 * * *'  # Run every 2 hours
   workflow_dispatch:  # Allow manual triggering
+  push:
+    paths-ignore:  # Prevent triggering on updates to .last_dev_build
+      - '.last_build'
+      - '.last_dev_build'
+      - '.last_prerelease_build'
 
 env:
   REGISTRY: ghcr.io
@@ -27,10 +32,16 @@ jobs:
         echo "PRERELEASE_TAG=$(echo $PRERELEASE_INFO | jq -r .tag_name)" >> $GITHUB_OUTPUT
         echo "PRERELEASE_DATE=$(echo $PRERELEASE_INFO | jq -r .published_at)" >> $GITHUB_OUTPUT
 
-    - name: Check for updates
+    - name: Determine if build should proceed
       id: check
       run: |
-        if [ ! -f .last_prerelease_build ] || [ "$(cat .last_prerelease_build)" != "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" ]; then
+        # Define individual conditions
+        MANUAL_TRIGGER="${{ github.event_name }}" == "workflow_dispatch"
+        NEW_COMMIT_PUSHED="${{ github.event_name }}" == "push" && [ "${{ github.actor }}" != "github-actions" ]
+        NEW_PRERELEASE_DETECTED=[ ! -f .last_prerelease_build ] || [ "$(cat .last_prerelease_build)" != "${{ steps.prerelease.outputs.PRERELEASE_TAG }}_${{ steps.prerelease.outputs.PRERELEASE_DATE }}" ]
+
+        # Check if any condition is true
+        if $MANUAL_TRIGGER || $NEW_COMMIT_PUSHED || $NEW_PRERELEASE_DETECTED; then
           echo "update=true" >> $GITHUB_OUTPUT
         else
           echo "update=false" >> $GITHUB_OUTPUT
