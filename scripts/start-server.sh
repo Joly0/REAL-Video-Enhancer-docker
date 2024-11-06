@@ -128,7 +128,16 @@ monitor_and_install() {
 
 while true; do
     echo "Starting $EXECUTABLE"
-    $EXECUTABLE --fullscreen &
+
+    # Check if NO_FULLSCREEN is set (to any value)
+    if [ -z "$NO_FULLSCREEN" ]; then
+        FLAGS="--fullscreen"
+    else
+        FLAGS=""
+    fi
+
+    # Start the executable with or without the fullscreen flag
+    $EXECUTABLE $FLAGS &
     PID=$!
     
     # Start monitoring in background
