@@ -46,12 +46,12 @@ jobs:
       id: check
       run: |
         # Define individual conditions for easier readability
-        MANUAL_TRIGGER="${{ github.event_name }}" == "workflow_dispatch"
-        NEW_COMMIT_PUSHED="${{ github.event_name }}" == "push" && [ "${{ github.actor }}" != "github-actions" ]
-        SOURCE_REPO_OLD="${{ steps.last_commit.outputs.build }}" == "true"
+        MANUAL_TRIGGER=$([[ "${{ github.event_name }}" == "workflow_dispatch" ]] && echo true || echo false)
+        NEW_COMMIT_PUSHED=$([[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" != "github-actions" ]] && echo true || echo false)
+        SOURCE_REPO_OLD=$([[ "${{ steps.last_commit.outputs.build }}" == "true" ]] && echo true || echo false)
     
         # Check if any condition is met to proceed with the build
-        if $MANUAL_TRIGGER || $NEW_COMMIT_PUSHED || $SOURCE_REPO_OLD; then
+        if [[ $MANUAL_TRIGGER == "true" || $NEW_COMMIT_PUSHED == "true" || $SOURCE_REPO_OLD == "true" ]]; then
           echo "update=true" >> $GITHUB_OUTPUT
         else
           echo "update=false" >> $GITHUB_OUTPUT
