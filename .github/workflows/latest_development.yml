@@ -81,7 +81,7 @@ jobs:
         file: ./dockerfile.dev
 
     - name: Update last build info
-      if: steps.check.outputs.update == 'true'
+      if: steps.last_commit.outputs.build == 'true'
       run: |
         echo "${{ steps.last_commit.outputs.LAST_COMMIT_HASH }}" > .last_dev_build
         git config user.name github-actions
