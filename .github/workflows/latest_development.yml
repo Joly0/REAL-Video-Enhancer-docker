@@ -45,9 +45,13 @@ jobs:
     - name: Determine if build should proceed
       id: check
       run: |
-        # Check if the workflow was manually triggered, or if the current repo received a commit (not by github-actions)
-        # or if the source repo is older than 4 hours.
-        if [ "${{ github.event_name }}" == "workflow_dispatch" ] || ([ "${{ github.event_name }}" == "push" ] && [ "${{ github.actor }}" != "github-actions" ]) || [ "${{ steps.last_commit.outputs.build }}" == "true" ]; then
+        # Define individual conditions for easier readability
+        MANUAL_TRIGGER="${{ github.event_name }}" == "workflow_dispatch"
+        NEW_COMMIT_PUSHED="${{ github.event_name }}" == "push" && [ "${{ github.actor }}" != "github-actions" ]
+        SOURCE_REPO_OLD="${{ steps.last_commit.outputs.build }}" == "true"
+    
+        # Check if any condition is met to proceed with the build
+        if $MANUAL_TRIGGER || $NEW_COMMIT_PUSHED || $SOURCE_REPO_OLD; then
           echo "update=true" >> $GITHUB_OUTPUT
         else
           echo "update=false" >> $GITHUB_OUTPUT
