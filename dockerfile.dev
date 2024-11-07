@@ -90,6 +90,9 @@ COPY --from=developer /tmp/bin ${DATA_DIR}/bin
 COPY scripts/ /opt/scripts/
 RUN chmod -R 770 /opt/scripts/
 
+# Copy Fluxbox config file
+COPY /conf/ /etc/.fluxbox/
+
 # Expose noVNC port
 EXPOSE 6080
 

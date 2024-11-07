@@ -9,6 +9,8 @@ on:
       - '.last_build'
       - '.last_dev_build'
       - '.last_prerelease_build'
+      - 'dockerfile'
+      - 'dockerfile.dev'
 
 env:
   REGISTRY: ghcr.io
