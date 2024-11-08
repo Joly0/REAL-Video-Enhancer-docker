@@ -1,5 +1,9 @@
-[app] (Title=.*)
-  [Layer]	{2}
-  [Maximized]	{yes}
-  [Deco]	{tiny}
+[app] (name=REAL-Video-Enhancer)
+  [Layer]   {12}
+[end]
+
+[app] (name=zenity)
+  [Layer]   {13}
+  [Raise]   {yes}
+  [Urgent]  {yes}
 [end]
