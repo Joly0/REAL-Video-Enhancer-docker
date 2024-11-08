@@ -1,9 +1,14 @@
 [app] (name=REAL-Video-Enhancer)
   [Layer]   {12}
+  [Fullscreen]  {yes}
+  [Borderless]  {no}
+  [Decorations] {menu title resize}
 [end]
 
 [app] (name=zenity)
   [Layer]   {13}
   [Raise]   {yes}
   [Urgent]  {yes}
+  [Position]   {Center}
+  [Dimension]  {80% 80%}
 [end]
