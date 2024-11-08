@@ -1,6 +1,5 @@
 [app] (name=REAL Video Enhancer)
   [Layer]   {12}
-  [Borderless]  {no}
   [Decorations] {menu title resize}
 [end]
 
