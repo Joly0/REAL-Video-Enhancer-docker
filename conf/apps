@@ -1,4 +1,4 @@
-[app] (name=REAL-Video-Enhancer)
+[app] (name=REAL Video Enhancer)
   [Layer]   {12}
   [Fullscreen]  {yes}
   [Borderless]  {no}
@@ -15,4 +15,8 @@
 
 [app] (*)
   [Layer]   {14}
+  [Raise]   {yes}
+  [Urgent]  {yes}
+  [Position]   {Center}
+  [Dimension]  {80% 80%}
 [end]
