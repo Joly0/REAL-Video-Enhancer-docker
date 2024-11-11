@@ -13,7 +13,7 @@ WORKDIR /tmp/REAL-Video-Enhancer
 RUN pip install -r requirements.txt && \
     python3 build.py --build_exe
 RUN mkdir /tmp/bin && \
-    mv /tmp/REAL-Video-Enhancer/dist/* /tmp/bin/ && \
+    mv /tmp/REAL-Video-Enhancer/bin/* /tmp/bin/ && \
     mv /tmp/REAL-Video-Enhancer/backend /tmp/bin/
 
 # Stage 3: Final Image
