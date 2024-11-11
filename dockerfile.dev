@@ -6,15 +6,12 @@ RUN python3 -m pip install --user --no-warn-script-location opencv-python tqdm
 
 # Stage 2: Clone and build REAL-Video-Enhancer
 FROM python:3.11 AS developer
-RUN apt-get update && apt-get install -y git
-WORKDIR /tmp
-RUN git clone https://github.com/TNTwise/REAL-Video-Enhancer
+RUN git clone https://github.com/TNTwise/REAL-Video-Enhancer /tmp/REAL-Video-Enhancer
 WORKDIR /tmp/REAL-Video-Enhancer
 RUN pip install -r requirements.txt && \
     python3 build.py --build_exe
 RUN mkdir /tmp/bin && \
-    mv /tmp/REAL-Video-Enhancer/bin/* /tmp/bin/ && \
-    mv /tmp/REAL-Video-Enhancer/backend /tmp/bin/
+    mv /tmp/REAL-Video-Enhancer/bin/* /tmp/bin/
 
 # Stage 3: Final Image
 FROM ich777/novnc-baseimage
