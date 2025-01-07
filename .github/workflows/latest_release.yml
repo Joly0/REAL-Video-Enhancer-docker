@@ -72,7 +72,7 @@ jobs:
         file: ./dockerfile
 
     - name: Update last build info
-      if: steps.check.outputs.build == 'true'
+      if: steps.check.outputs.update == 'true'
       run: |
         # Function to update .last_build
         update_last_build_file() {
