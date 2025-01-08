@@ -73,7 +73,7 @@ jobs:
         file: ./dockerfile.pre
 
     - name: Update last build info
-      if: ssteps.check.outputs.update == 'true'
+      if: steps.check.outputs.update == 'true'
       run: |
         # Function to update .last_prerelease_build
         update_last_build_file() {
