@@ -9,7 +9,7 @@ FROM python:3.11 AS developer
 RUN git clone https://github.com/TNTwise/REAL-Video-Enhancer /tmp/REAL-Video-Enhancer
 WORKDIR /tmp/REAL-Video-Enhancer
 RUN pip install -r requirements.txt && \
-    python3 build.py --build_exe
+    python3 build.py --build cx_freeze
 RUN mkdir /tmp/bin && \
     mv /tmp/REAL-Video-Enhancer/bin/* /tmp/bin/
 
