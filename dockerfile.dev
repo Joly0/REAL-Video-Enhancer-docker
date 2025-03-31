@@ -12,7 +12,7 @@ RUN pip install -r requirements.txt && \
     pip install --upgrade cx_Freeze && \
     python3 build.py --build cx_freeze --copy_backend
 RUN mkdir /tmp/bin && \
-    mv /tmp/REAL-Video-Enhancer/bin/* /tmp/bin/
+    mv /tmp/REAL-Video-Enhancer/backend/* /tmp/bin/
 
 # Stage 3: Final Image
 FROM ich777/novnc-baseimage
