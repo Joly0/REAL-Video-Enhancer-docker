@@ -8,7 +8,7 @@ RUN python3 -m pip install --user --no-warn-script-location opencv-python tqdm
 FROM ubuntu:20.04 AS downloader
 RUN apt-get update && apt-get install -y curl unzip
 WORKDIR /tmp
-RUN DOWNLOAD_URL=$(curl -s https://api.github.com/repos/TNTwise/REAL-Video-Enhancer/releases/latest | grep "browser_download_url.*Linux-portable.zip" | cut -d '"' -f 4) && \
+RUN DOWNLOAD_URL=$(curl -s https://api.github.com/repos/TNTwise/REAL-Video-Enhancer/releases/latest | grep -i 'browser_download_url' | grep -i 'linux' | grep -i 'x86_64' | cut -d '"' -f 4) && \
     curl -L "$DOWNLOAD_URL" -o REAL-Video-Enhancer-Linux.zip && \
     unzip REAL-Video-Enhancer-Linux.zip && \
     rm REAL-Video-Enhancer-Linux.zip
