@@ -2,7 +2,7 @@ name: Build and Push Dev Docker Image
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Run every 2 hours
+    - cron: '0 */2 * * *'  # Run every 2 hours  # Run every 2 hours
   workflow_dispatch:  # Allow manual triggering
   push:
     paths-ignore:  # Prevent triggering on updates to .last_dev_build
@@ -28,21 +28,57 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Get last commit info from source repo
+    - name: Get last commit info from source repo (with retries)
       id: last_commit
+      shell: bash
       run: |
-        DEFAULT_BRANCH=$(curl -s https://api.github.com/repos/${{ env.SOURCE_REPO }} | jq '.default_branch' | tr -d \")
-        LAST_COMMIT_INFO=$(curl -s "https://api.github.com/repos/${{ env.SOURCE_REPO }}/commits/$DEFAULT_BRANCH")
-        LAST_COMMIT_TIME=$(echo $LAST_COMMIT_INFO | jq -r .commit.author.date)
-        LAST_COMMIT_TIMESTAMP=$(date -d "$LAST_COMMIT_TIME" +%s)
+        set -euo pipefail
+
+        retry() {
+          local retries=5
+          local wait=5
+          local n=0
+          until "$@"; do
+            exit_code=$?
+            n=$((n+1))
+            if [ $n -ge $retries ]; then
+              echo "Command failed after $retries attempts."
+              return $exit_code
+            fi
+            echo "Retrying in $wait seconds..."
+            sleep $wait
+            wait=$((wait*2)) # exponential backoff
+          done
+        }
+
+        DEFAULT_BRANCH=$(retry curl -s https://api.github.com/repos/${{ env.SOURCE_REPO }} | jq -r '.default_branch')
+        LAST_COMMIT_INFO=$(retry curl -s "https://api.github.com/repos/${{ env.SOURCE_REPO }}/commits/$DEFAULT_BRANCH")
+
+        LAST_COMMIT_TIME=$(echo "$LAST_COMMIT_INFO" | jq -r .commit.author.date)
+        if [ -z "$LAST_COMMIT_TIME" ] || [ "$LAST_COMMIT_TIME" = "null" ]; then
+          echo "Could not fetch commit time, skipping build."
+          echo "build=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # date with retry + sanity check
+        LAST_COMMIT_TIMESTAMP=$(retry date -d "$LAST_COMMIT_TIME" +%s || echo 0)
+        if [ "$LAST_COMMIT_TIMESTAMP" -eq 0 ]; then
+          echo "Invalid timestamp, skipping build."
+          echo "build=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
         CURRENT_TIME=$(date +%s)
         TIME_DIFF=$((CURRENT_TIME - LAST_COMMIT_TIMESTAMP))
-        if [ $TIME_DIFF -ge 14400 ]; then  # 14400 seconds = 4 hours
+
+        if [ $TIME_DIFF -ge 14400 ]; then  # 14400s = 4h
           echo "build=true" >> $GITHUB_OUTPUT
         else
           echo "build=false" >> $GITHUB_OUTPUT
         fi
-        echo "LAST_COMMIT_HASH=$(echo $LAST_COMMIT_INFO | jq -r .sha)" >> $GITHUB_OUTPUT
+
+        echo "LAST_COMMIT_HASH=$(echo "$LAST_COMMIT_INFO" | jq -r .sha)" >> $GITHUB_OUTPUT
 
     - name: Determine if build should proceed
       id: check
@@ -51,7 +87,7 @@ jobs:
         MANUAL_TRIGGER=$([[ "${{ github.event_name }}" == "workflow_dispatch" ]] && echo true || echo false)
         NEW_COMMIT_PUSHED=$([[ "${{ github.event_name }}" == "push" && "${{ github.actor }}" != "github-actions" ]] && echo true || echo false)
         SOURCE_REPO_OLD=$([[ "${{ steps.last_commit.outputs.build }}" == "true" ]] && echo true || echo false)
-    
+
         # Check if any condition is met to proceed with the build
         if [[ $MANUAL_TRIGGER == "true" || $NEW_COMMIT_PUSHED == "true" || $SOURCE_REPO_OLD == "true" ]]; then
           echo "update=true" >> $GITHUB_OUTPUT
@@ -63,7 +99,7 @@ jobs:
       id: meta
       if: steps.check.outputs.update == 'true'
       run: |
-        echo "IMAGE_ID=$(echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} | tr '[A-Z]' '[a-z]')" >> $GITHUB_OUTPUT
+        echo "IMAGE_ID=$(echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
     - name: Log in to the Container registry
       if: steps.check.outputs.update == 'true'
@@ -85,27 +121,29 @@ jobs:
     - name: Update last build info
       if: steps.check.outputs.update == 'true'
       run: |
+        set -euo pipefail
+
         # Function to update the .last_dev_build file
         update_last_build_file() {
           echo "$1" > .last_dev_build
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .last_dev_build
-          git commit -m "Update last dev build info"
-          git push
+          git commit -m "Update last dev build info" || true
+          git push || true
         }
-    
+
         # Get the new commit hash from the output
         NEW_COMMIT_HASH="${{ steps.last_commit.outputs.LAST_COMMIT_HASH }}"
-    
+
         # Check if .last_dev_build exists
         if [[ -f .last_dev_build ]]; then
           # Compare with the old commit hash stored in .last_dev_build
-          OLD_COMMIT_HASH=$(cat .last_dev_build)
+          OLD_COMMIT_HASH=$(cat .last_dev_build || echo "")
           if [[ "$NEW_COMMIT_HASH" != "$OLD_COMMIT_HASH" ]]; then
             update_last_build_file "$NEW_COMMIT_HASH"
           else
-            echo "No new commit, skipping the commit step."
+            echo "No new commit, skipping."
           fi
         else
           # If the file doesn't exist, create it and commit
