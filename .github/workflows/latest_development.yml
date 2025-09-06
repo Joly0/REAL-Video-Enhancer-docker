@@ -5,6 +5,8 @@ on:
     - cron: '0 */2 * * *'  # Run every 2 hours  # Run every 2 hours
   workflow_dispatch:  # Allow manual triggering
   push:
+    branches:
+      - main
     paths-ignore:  # Prevent triggering on updates to .last_dev_build
       - '.last_build'
       - '.last_dev_build'
