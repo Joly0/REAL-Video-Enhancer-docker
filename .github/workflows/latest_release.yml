@@ -11,6 +11,7 @@ on:
       - '.last_prerelease_build'
       - 'dockerfile.dev'
       - 'dockerfile.pre'
+      - '.github/**'
 
 env:
   REGISTRY: ghcr.io
